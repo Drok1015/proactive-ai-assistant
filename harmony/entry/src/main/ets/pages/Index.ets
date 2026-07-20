@@ -15,7 +15,7 @@ struct Index {
   @State currentIndex: number = 0;
   @State tasks: Task[] = [];
   @State notifications: NotificationLog[] = [];
-  @State backendUrl: string = 'http://10.0.2.2:8000';
+  @State backendUrl: string = 'https://ruarua520.xyz';
   @State isLoading: boolean = false;
   @State isConnected: boolean = false;
   @State toastMsg: string = '';

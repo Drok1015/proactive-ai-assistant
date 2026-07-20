@@ -4,7 +4,7 @@ import { common } from '@kit.AbilityKit';
 const STORE_NAME = 'proactive_ai_prefs';
 const KEY_BACKEND_URL = 'backend_url';
 
-const DEFAULT_BACKEND_URL = 'http://10.0.2.2:8000';
+const DEFAULT_BACKEND_URL = 'https://ruarua520.xyz';
 
 /**
  * 本地持久化存储工具

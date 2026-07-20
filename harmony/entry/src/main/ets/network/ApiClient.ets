@@ -9,7 +9,7 @@ import {
   VersionCheckResponse,
 } from '../models/ApiModels';
 
-const DEFAULT_BASE_URL = 'http://10.0.2.2:8000';
+const DEFAULT_BASE_URL = 'https://ruarua520.xyz';
 
 class EmptyPayload {
 }
