@@ -1,0 +1,20 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/proactive_ai.db
+backend/*.egg-info/
+mobile/.dart_tool/
+mobile/.flutter-plugins*
+mobile/build/
+mobile/.idea/
+harmony/.hvigor/
+harmony/build/
+harmony/local.properties
+harmony/.idea/
+harmony/oh_modules/
+harmony/entry/build/
+# DevEco 自动签名会在该文件写入本机证书路径与密码；只保留可提交的示例配置。
+harmony/build-profile.json5

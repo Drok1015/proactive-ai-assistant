@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "主动式 AI 任务客户端" },
+    { "name": "EntryAbility_desc", "value": "主动式 AI 主界面" },
+    { "name": "EntryAbility_label", "value": "主动 AI" }
+  ]
+}

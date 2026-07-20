@@ -1,0 +1,76 @@
+name: Build and publish HarmonyOS preview
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  harmony:
+    # DevEco Studio and the HarmonyOS SDK must be installed on this runner.
+    runs-on: [self-hosted, macos, deveco]
+    defaults:
+      run:
+        working-directory: harmony
+    env:
+      HAP_PATH: entry/build/default/outputs/default/entry-default-signed.hap
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build signed HAP with DevEco
+        run: ./hvigorw --mode module -p module=entry@default -p product=default assembleHap
+      - name: Request Pgyer upload token
+        id: pgyer_token
+        env:
+          PGYER_API_KEY: ${{ secrets.PGYER_API_KEY }}
+        run: |
+          response=$(curl --fail-with-body -sS -X POST https://www.pgyer.com/apiv2/app/getCOSToken \
+            -F "_api_key=$PGYER_API_KEY" -F 'buildType=harmonyos' -F 'buildInstallType=1')
+          echo "$response" > pgyer-token.json
+          test "$(jq -r '.code' pgyer-token.json)" = '0'
+          echo "endpoint=$(jq -r '.data.endpoint' pgyer-token.json)" >> "$GITHUB_OUTPUT"
+          echo "key=$(jq -r '.data.key' pgyer-token.json)" >> "$GITHUB_OUTPUT"
+          echo "signature=$(jq -r '.data.params.signature' pgyer-token.json)" >> "$GITHUB_OUTPUT"
+          echo "security_token=$(jq -r '.data.params[\"x-cos-security-token\"]' pgyer-token.json)" >> "$GITHUB_OUTPUT"
+      - name: Upload HAP to Pgyer
+        run: |
+          test -f "$HAP_PATH"
+          curl --fail-with-body -sS -X POST '${{ steps.pgyer_token.outputs.endpoint }}' \
+            -F 'key=${{ steps.pgyer_token.outputs.key }}' \
+            -F 'signature=${{ steps.pgyer_token.outputs.signature }}' \
+            -F 'x-cos-security-token=${{ steps.pgyer_token.outputs.security_token }}' \
+            -F 'x-cos-meta-file-name=proactive-ai.hap' \
+            -F "file=@$HAP_PATH"
+      - name: Upload HarmonyOS certificate when configured
+        env:
+          PGYER_API_KEY: ${{ secrets.PGYER_API_KEY }}
+          HARMONY_P12_BASE64: ${{ secrets.HARMONY_P12_BASE64 }}
+          HARMONY_P12_PASSWORD: ${{ secrets.HARMONY_P12_PASSWORD }}
+        run: |
+          if [ -z "$HARMONY_P12_BASE64" ]; then exit 0; fi
+          echo "$HARMONY_P12_BASE64" | base64 --decode > signing.p12
+          curl --fail-with-body -sS -X POST https://upload.pgyer.com/apiv2/app/uploadHarmonyCert \
+            -F "_api_key=$PGYER_API_KEY" \
+            -F 'buildKey=${{ steps.pgyer_token.outputs.key }}' \
+            -F "password=$HARMONY_P12_PASSWORD" \
+            -F 'file=@signing.p12'
+      - name: Wait for Pgyer release
+        env:
+          PGYER_API_KEY: ${{ secrets.PGYER_API_KEY }}
+        run: |
+          for attempt in $(seq 1 20); do
+            result=$(curl --fail-with-body -sS -G https://www.pgyer.com/apiv2/app/buildInfo \
+              --data-urlencode "_api_key=$PGYER_API_KEY" \
+              --data-urlencode 'buildKey=${{ steps.pgyer_token.outputs.key }}')
+            code=$(echo "$result" | jq -r '.code')
+            if [ "$code" = '0' ]; then
+              echo "蒲公英已发布：$(echo "$result" | jq -r '.data.buildShortcutUrl')"
+              exit 0
+            fi
+            if [ "$code" != '1247' ]; then
+              echo "$result"
+              exit 1
+            fi
+            sleep 5
+          done
+          echo 'Timed out waiting for Pgyer release.'
+          exit 1
